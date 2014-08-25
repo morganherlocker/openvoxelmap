@@ -51,7 +51,9 @@ module.exports = function(opts, setup) {
   avatar.yaw.position.set(startingPosition[0], 5, startingPosition[1])
 
   setup(game, avatar)
-  getVectorTileFeatures(tileUrl)
+  getVectorTileFeatures(function(){
+    console.log('OK')
+  })
   return game
 }
 
@@ -97,18 +99,20 @@ function defaultSetup(game, avatar) {
   })
 }
 
-function getVectorTileFeatures(tileUrl){
-  var position = game.controls.target().position;
+function getVectorTileFeatures(done){
+  var position = tilebelt.tiles(game.controls.target().position);
 
+  var url = '/'+position.x
+  url += '/'+position.z
+  url += '/15'
 
-  var url = tileUrl.split('{x}').join(position.x);
-  url = tileUrl.split('{y}').join(position.z);
-  url = tileUrl.split('{z}').join('15');
-
-  request(url, function(err, pbf){
-    var vt = new VectorTile(pbf);
-    console.log(vt.layers)
-
+  request(url, function(err, vt){
+    console.log(vt);
+    if(err){
+      done(err);
+    } else {
+      done(null, vt);
+    }
   })
 }
 
