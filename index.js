@@ -100,7 +100,13 @@ function defaultSetup(game, avatar) {
 }
 
 function getVectorTileFeatures(done){
+  //round current position to get z17 tile
   var position = tilebelt.tiles(game.controls.target().position);
+  position.x = Math.round(position.x);
+  position.z = Math.round(position.z);
+  //get parent twice to go from z17 to z15
+  tilebelt.getParent(tilebelt.getParent([position.x, position.y, 15]))
+
 
   var url = '/'+position.x
   url += '/'+position.z
