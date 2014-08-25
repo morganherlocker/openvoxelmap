@@ -3,6 +3,8 @@ voxel-openstreetmap
 
 Work in progress implementation of https://gist.github.com/morganherlocker/dab817600918f7e32407
 
+The general idea is to create a walkable voxel openstreetmap world at ~1 meter resolution. I have 
+
 #running
 
 ```sh
@@ -14,7 +16,7 @@ create a config.json file that looks like this:
 
 ```json
 {
-	token: '<my mapbox gl token>'
+	"token": "<my mapbox gl token>"
 }
 ```
 
