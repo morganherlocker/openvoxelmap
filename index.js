@@ -101,18 +101,19 @@ function defaultSetup(game, avatar) {
 
 function getVectorTileFeatures(done){
   //round current position to get z17 tile
-  var position = tilebelt.tiles(game.controls.target().position);
+  var position = game.controls.target().position;
   position.x = Math.round(position.x);
   position.z = Math.round(position.z);
+
   //get parent twice to go from z17 to z15
-  tilebelt.getParent(tilebelt.getParent([position.x, position.y, 15]))
+  var tileToLoad = tilebelt.getParent(tilebelt.getParent([position.x, position.z, 17]))
+  console.log(tileToLoad)
 
-
-  var url = '/'+position.x
-  url += '/'+position.z
+  var url = 'http://127.0.0.1:8081/'+tileToLoad[0]
+  url += '/'+tileToLoad[1]
   url += '/15'
 
-  request(url, function(err, vt){
+  request(url, function(err, vt, body){
     console.log(vt);
     if(err){
       done(err);
