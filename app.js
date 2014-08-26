@@ -32,30 +32,34 @@ function getVectorTile(x,y,z, done){
     var url = tileUrl.split('{x}').join(x);
     url = url.split('{y}').join(y);
     url = url.split('{z}').join(z);
-    console.log('x',x)
-    console.log('y',y)
-    console.log('z',z)
-    console.log(url)
-
-    var options = {
-    url: url,
-    encoding: null
-  }
-  request(options, function(error, response, body) {
-    if(error) console.log(error)
-    if (!error && response.statusCode >= 200 && response.statusCode < 300) {
-        var ab = new ArrayBuffer(body.length);
-        var view = new Uint8Array(ab);
-        for (var i = 0; i < body.length; ++i) {
-            view[i] = body[i];
+    var vtFile = './cache/'+x+'-'+y+'-'+z+'.vector.pbf'
+    var vectorTile;
+    
+    if(!fs.exitsts(vtFile)) {
+        var options = {
+            url: url,
+            encoding: null
         }
-        zlib.gunzip(body, function(err, inflated){
-            fs.writeFileSync('./cache/'+x+'-'+y+'-'+z+'.vector.pbf', inflated)
-            var vt = new VectorTile(new Protobuf(inflated))
-            console.log(vt.layers.building)
-        })
+        request(options, function(error, response, body) {
+            if(error) {
+                throw error;
+            }
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+                var ab = new ArrayBuffer(body.length);
+                var view = new Uint8Array(ab);
+                for (var i = 0; i < body.length; ++i) {
+                    view[i] = body[i];
+                }
+                zlib.gunzip(body, function(err, inflated){
+                    fs.writeFile(vtFile, inflated, function(){
+                       return new VectorTile(new Protobuf(inflated));
+                    });
+                });
+            }
+        });
     } else {
-        console.log('SERVER FAIL')
+        fs.readFile(vtFile, function(err, vectorTile) {
+            return vectorTile;
+        });        
     }
-  });
 }
