@@ -14,7 +14,7 @@ server.route({
     path: '/{x}/{y}/{z}',
     handler: function (request, reply) {
         getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vectorTile){
-            processVectorTile(vectorTile, function(err res) {
+            processVectorTile(vectorTile, function(err, res) {
                 if(err){
                     reply(err); // TODO: make this a valid error code
                 } else {
@@ -69,5 +69,5 @@ function getVectorTile(x,y,z, done){
 }
 
 function processVectorTile(vt, done) {
-    
+
 }
