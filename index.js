@@ -113,14 +113,27 @@ function getVectorTileFeatures(done){
   url += '/'+tileToLoad[1]
   url += '/15'
 
-  request(url, function(err, vt, body){
-    console.log(vt);
-    if(err){
-      done(err);
+  var options = {
+    url: url,
+    encoding: null
+  }
+  request(options, function(error, response, body) {
+    if(error) console.log(error)
+    if (!error && response.statusCode >= 200 && response.statusCode < 300) {
+        var ab = new ArrayBuffer(body.length);
+        var view = new Uint8Array(ab);
+        for (var i = 0; i < body.length; ++i) {
+            view[i] = body[i];
+        }
+        zlib.gunzip(body, function(err, inflated){
+            fs.writeFileSync('./cache/'+x+'-'+y+'-'+z+'.vector.pbf', inflated)
+            var vt = new VectorTile(new Protobuf(inflated))
+            console.log(vt.layers.building)
+        })
     } else {
-      done(null, vt);
+        console.log('SERVER FAIL')
     }
-  })
+});
 }
 
 
