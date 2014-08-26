@@ -12,8 +12,6 @@ var x = '9371'
 var y = '12534'
 var z = '15'
 
-
-
 request({url: url, encoding: null}, function(error, response, body) {
     if(error) console.log(error)
     if (!error && response.statusCode >= 200 && response.statusCode < 300) {
@@ -23,12 +21,9 @@ request({url: url, encoding: null}, function(error, response, body) {
             view[i] = body[i];
         }
         console.log(body)
-        //console.log(view)
         zlib.gunzip(body, function(err, inflated){
             console.log(err)
             fs.writeFileSync('./cache/'+x+'-'+y+'-'+z+'.vector.pbf', inflated)
-            //var data = fs.readFileSync('./cache/9371-12534-15.vector.pbf')
-            //var data = fs.readFileSync('./cache/14-8801-5371.vector.pbf')
 
             var vt = new VectorTile(new Protobuf(inflated))
             console.log(vt.layers.building.feature(0).loadGeometry())

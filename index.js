@@ -7,13 +7,8 @@ var fly = require('voxel-fly')
 var walk = require('voxel-walk')
 var tilebelt = require('tilebelt')
 var cover = require('tile-cover')
-var request = require('browser-request')
-//var request = require('corslite')
-var VectorTile = require('vector-tile')
+var req = require('browser-request')
 var config = require('./config.json')
-//var zlibjs = require('zlibjs')
-var tileUrl = 'https://a.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6-dev/{z}/{x}/{y}.vector.pbf?access_token='+config.token;
-
 
 module.exports = function(opts, setup) {
   var startLon = -77.036388;
@@ -113,27 +108,9 @@ function getVectorTileFeatures(done){
   url += '/'+tileToLoad[1]
   url += '/15'
 
-  var options = {
-    url: url,
-    encoding: null
-  }
-  request(options, function(error, response, body) {
-    if(error) console.log(error)
-    if (!error && response.statusCode >= 200 && response.statusCode < 300) {
-        var ab = new ArrayBuffer(body.length);
-        var view = new Uint8Array(ab);
-        for (var i = 0; i < body.length; ++i) {
-            view[i] = body[i];
-        }
-        zlib.gunzip(body, function(err, inflated){
-            fs.writeFileSync('./cache/'+x+'-'+y+'-'+z+'.vector.pbf', inflated)
-            var vt = new VectorTile(new Protobuf(inflated))
-            console.log(vt.layers.building)
-        })
-    } else {
-        console.log('SERVER FAIL')
-    }
-});
+  req(url, function(error, response, body) {
+    console.log(body)
+  });
 }
 
 

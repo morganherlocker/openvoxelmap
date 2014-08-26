@@ -37,28 +37,25 @@ function getVectorTile(x,y,z, done){
     console.log('z',z)
     console.log(url)
 
-    req(url, function(err, data, body){
-        console.log('err', err)
-        fs.writeFileSync('./cache/'+x+'-'+y+'-'+z+'.vector.pbf', body, 'utf8')
-        var body = fs.readFileSync('./cache/14-8801-5371.vector.pbf')
-        //console.log('body', body)
-        var pbf = new Protobuf(body)
-        var vt = new VectorTile(pbf)
-        console.log('vt', vt)
-    })
-     /* var req = Request({url: url});
-
-  req.on('response', function(e) {
-        if (e.statusCode === 200) {
-            req.pipe(zlib.createInflate()).pipe(concat(function(data) {
-                var vtile = new VectorTile(z, x, y);
-                vtile.setData(data);
-                vtile.parse();
-                console.log(vtile);
-                done(null, vtile);
-            }));
-        } else {
-            done(new Error('No data found'))
+    var options = {
+    url: url,
+    encoding: null
+  }
+  request(options, function(error, response, body) {
+    if(error) console.log(error)
+    if (!error && response.statusCode >= 200 && response.statusCode < 300) {
+        var ab = new ArrayBuffer(body.length);
+        var view = new Uint8Array(ab);
+        for (var i = 0; i < body.length; ++i) {
+            view[i] = body[i];
         }
-    });*/
+        zlib.gunzip(body, function(err, inflated){
+            fs.writeFileSync('./cache/'+x+'-'+y+'-'+z+'.vector.pbf', inflated)
+            var vt = new VectorTile(new Protobuf(inflated))
+            console.log(vt.layers.building)
+        })
+    } else {
+        console.log('SERVER FAIL')
+    }
+  });
 }
