@@ -15,9 +15,9 @@ server.route({
     handler: function (request, reply) {
         getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vtile){
             if(err){
-                reply(err) // TODO: make this a valid error code
+                reply(err); // TODO: make this a valid error code
             } else {
-                reply(vtile)
+                reply(vtile);
             }
         });
     }
@@ -34,7 +34,7 @@ function getVectorTile(x,y,z, done){
     url = url.split('{z}').join(z);
     var vtFile = './cache/'+x+'-'+y+'-'+z+'.vector.pbf'
     var vectorTile;
-    
+
     if(!fs.exitsts(vtFile)) {
         var options = {
             url: url,
