@@ -13,12 +13,14 @@ server.route({
     method: 'GET',
     path: '/{x}/{y}/{z}',
     handler: function (request, reply) {
-        getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vtile){
-            if(err){
-                reply(err); // TODO: make this a valid error code
-            } else {
-                reply(vtile);
-            }
+        getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vectorTile){
+            processVectorTile(vectorTile, function(err res) {
+                if(err){
+                    reply(err); // TODO: make this a valid error code
+                } else {
+                    reply(res);
+                }
+            });
         });
     }
 });
@@ -35,6 +37,8 @@ function getVectorTile(x,y,z, done){
     var vtFile = './cache/'+x+'-'+y+'-'+z+'.vector.pbf'
     var vectorTile;
 
+    // if the file exists, just pull from the cache
+    // add a timeout in the future for realtimey stuff
     if(!fs.exitsts(vtFile)) {
         var options = {
             url: url,
@@ -62,4 +66,8 @@ function getVectorTile(x,y,z, done){
             return vectorTile;
         });        
     }
+}
+
+function processVectorTile(vt, done) {
+    
 }
