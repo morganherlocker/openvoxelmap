@@ -7,8 +7,13 @@ var fly = require('voxel-fly')
 var walk = require('voxel-walk')
 var tilebelt = require('tilebelt')
 var cover = require('tile-cover')
-var req = require('browser-request')
+var request = require('browser-request')
+//var request = require('corslite')
+var VectorTile = require('vector-tile')
 var config = require('./config.json')
+//var zlibjs = require('zlibjs')
+var tileUrl = 'https://a.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6-dev/{z}/{x}/{y}.vector.pbf?access_token='+config.token;
+
 
 module.exports = function(opts, setup) {
   var startLon = -77.036388;
@@ -107,10 +112,15 @@ function getVectorTileFeatures(done){
   var url = 'http://127.0.0.1:8081/'+tileToLoad[0]
   url += '/'+tileToLoad[1]
   url += '/15'
-
-  req(url, function(error, response, body) {
-    console.log(body)
-  });
+  console.log(url)
+  request(url, function(err, vt, body){
+    console.log(vt);
+    if(err){
+      done(err);
+    } else {
+      done(null, vt);
+    }
+  })
 }
 
 

@@ -1,6 +1,6 @@
 var zlib = require('zlib');
 var Hapi = require('hapi');
-var req = require('request');
+var request = require('request');
 var VectorTile = require('vector-tile').VectorTile
 var concat = require('concat-stream');
 var Protobuf = require('pbf')
@@ -13,7 +13,10 @@ server.route({
     method: 'GET',
     path: '/{x}/{y}/{z}',
     handler: function (request, reply) {
+        console.log('GOT REQUEST')
         getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vectorTile){
+            console.log(err)
+            console.log('GOT VECTORTILE')
             processVectorTile(vectorTile, function(err, res) {
                 if(err){
                     reply(err); // TODO: make this a valid error code
@@ -39,7 +42,7 @@ function getVectorTile(x,y,z, done){
 
     // if the file exists, just pull from the cache
     // add a timeout in the future for realtimey stuff
-    if(!fs.exitsts(vtFile)) {
+    if(!fs.exists(vtFile)) {
         var options = {
             url: url,
             encoding: null
@@ -56,7 +59,7 @@ function getVectorTile(x,y,z, done){
                 }
                 zlib.gunzip(body, function(err, inflated){
                     fs.writeFile(vtFile, inflated, function(){
-                       return new VectorTile(new Protobuf(inflated));
+                       done(null, new VectorTile(new Protobuf(inflated)));
                     });
                 });
             }
@@ -70,4 +73,5 @@ function getVectorTile(x,y,z, done){
 
 function processVectorTile(vt, done) {
 
+    done(err, vt)
 }

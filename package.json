@@ -11,7 +11,7 @@
     "extend": "1.1.3",
     "hapi": "^6.6.0",
     "pbf": "0.0.2",
-    "request": "^2.40.0",
+    "request": "^2.42.0",
     "tile-cover": "^0.3.0",
     "tilebelt": "^0.2.0",
     "vector-tile": "^0.1.2",
