@@ -45,7 +45,7 @@ module.exports = function(opts, setup) {
   if (game.notCapable()) return game
   
   var createPlayer = player(game)
-  var avatar = createPlayer(opts.playerSkin || 'player.png')
+  var avatar = createPlayer(opts.playerSkin || 'koala.png')
   avatar.possess()
   avatar.yaw.position.set(0, 5, 0)
 
@@ -99,29 +99,23 @@ function defaultSetup(game, avatar) {
 }
 
 function getVectorTileFeatures(done){
-  //round current position to get z17 tile
   var position = {};
   position.x = Math.round(game.controls.target().position.x)+startingPosition[0];
   position.z = Math.round(game.controls.target().position.z)+startingPosition[1];
-
+ 
   //get parent twice to go from z17 to z15
   var tileToLoad = [position.x, position.z, playerZoom]
   while(tileToLoad[2] > 15){
     tileToLoad = tilebelt.getParent(tileToLoad);
   }
-  //console.log(tileToLoad)
 
-  var url = 'http://127.0.0.1:8081/'+tileToLoad[0]
+  var url = 'http://127.0.0.1:3000/'+tileToLoad[0]
   url += '/'+tileToLoad[1]
   url += '/15'
   console.log(url)
   request(url, function(err, vt, body){
-    console.log(vt);
-    if(err){
-      done(err);
-    } else {
-      done(null, vt);
-    }
+    console.log(body)
+    done(body)
   })
 }
 

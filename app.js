@@ -6,9 +6,10 @@ var concat = require('concat-stream');
 var Protobuf = require('pbf')
 var fs = require('fs')
 var traverse = require('traverse')
+var tilebelt = require('tilebelt')
 var config = require('./config.json');
-
-var server = new Hapi.Server(8081);
+var zoomEncoding = 27
+var server = new Hapi.Server(3000);
 
 server.route({
     method: 'GET',
@@ -32,7 +33,7 @@ server.route({
     handler: function (request, reply) {
         console.time('vt')
         getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vectorTile){
-            processVectorTile(vectorTile, [request.params.x, request.params.y, request.params.z], function(err, res) {
+            processVectorTile(vectorTile, [parseFloat(request.params.x), parseFloat(request.params.y), parseInt(request.params.z)], function(err, res) {
                 console.timeEnd('vt')
                 if(err){
                     reply(err); // TODO: make this a valid error code
@@ -98,11 +99,17 @@ function processVectorTile(vt, tile, done) {
         building.properties = vt.layers.building.feature(i).properties;
         building.geometry = vt.layers.building.feature(i).loadGeometry();
         traverse(building.geometry).forEach(function(g){
-            if(!Array.isArray(g) && g.x) {
-                //console.log(g)
-                var x = tile[0] + (g.x / 4096)
-                var y = tile[1] + (g.y / 4096)
-                this.update([x,y]);
+            if(!Array.isArray(g) && typeof g.x === 'number') {
+                var topLeft = tile;
+                while(topLeft[2] < zoomEncoding){
+                    topLeft = tilebelt.getChildren(topLeft)[0]
+                }
+                var x = topLeft[0] + g.x
+                var y = topLeft[1] + g.y
+                var bbox = tilebelt.tileToBBOX([x,y,zoomEncoding])
+                var lon = (bbox[0] + bbox[2])/2
+                var lat = (bbox[1] + bbox[3])/2
+                this.update([lon,lat]);
             }
         });
         buildings.push(building)

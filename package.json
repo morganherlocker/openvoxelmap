@@ -29,6 +29,6 @@
   },
   "scripts": {
     "start": "node app.js",
-    "build": "browserify test.js -o world/bundle.js"
+    "build": "browserify ./test.js -o ./world/bundle.js"
   }
 }
