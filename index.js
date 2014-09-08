@@ -14,13 +14,12 @@ var config = require('./config.json')
 //var zlibjs = require('zlibjs')
 var tileUrl = 'https://a.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6-dev/{z}/{x}/{y}.vector.pbf?access_token='+config.token;
 
+var playerZoom = 25;
+var startLon = -77.036388;
+var startLat = 38.900646;
+var startingPosition = tilebelt.pointToTile(startLon, startLat, playerZoom);
 
 module.exports = function(opts, setup) {
-  var startLon = -77.036388;
-  var startLat = 38.900646;
-  var startingPosition = tilebelt.pointToTile(startLon, startLat, 17);
-
-
   setup = setup || defaultSetup
   var defaults = {
     generate: function(x,y,z){
@@ -48,7 +47,7 @@ module.exports = function(opts, setup) {
   var createPlayer = player(game)
   var avatar = createPlayer(opts.playerSkin || 'player.png')
   avatar.possess()
-  avatar.yaw.position.set(startingPosition[0], 5, startingPosition[1])
+  avatar.yaw.position.set(0, 5, 0)
 
   setup(game, avatar)
   getVectorTileFeatures(function(){
@@ -101,13 +100,16 @@ function defaultSetup(game, avatar) {
 
 function getVectorTileFeatures(done){
   //round current position to get z17 tile
-  var position = game.controls.target().position;
-  position.x = Math.round(position.x);
-  position.z = Math.round(position.z);
+  var position = {};
+  position.x = Math.round(game.controls.target().position.x)+startingPosition[0];
+  position.z = Math.round(game.controls.target().position.z)+startingPosition[1];
 
   //get parent twice to go from z17 to z15
-  var tileToLoad = tilebelt.getParent(tilebelt.getParent([position.x, position.z, 17]))
-  console.log(tileToLoad)
+  var tileToLoad = [position.x, position.z, playerZoom]
+  while(tileToLoad[2] > 15){
+    tileToLoad = tilebelt.getParent(tileToLoad);
+  }
+  //console.log(tileToLoad)
 
   var url = 'http://127.0.0.1:8081/'+tileToLoad[0]
   url += '/'+tileToLoad[1]

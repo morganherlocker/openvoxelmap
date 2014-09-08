@@ -5,19 +5,35 @@ var VectorTile = require('vector-tile').VectorTile
 var concat = require('concat-stream');
 var Protobuf = require('pbf')
 var fs = require('fs')
+var traverse = require('traverse')
 var config = require('./config.json');
 
 var server = new Hapi.Server(8081);
 
 server.route({
     method: 'GET',
+    path: '/',
+    handler: function (request, reply) {
+        reply.file('index.html')
+    }
+});
+
+server.route({ 
+    method : 'GET',
+    path : '/world/{path*}',
+    handler: {
+        directory: { path: './world', listing: false, index: true }
+    }
+});
+
+server.route({
+    method: 'GET',
     path: '/{x}/{y}/{z}',
     handler: function (request, reply) {
-        console.log('GOT REQUEST')
+        console.time('vt')
         getVectorTile(request.params.x, request.params.y, request.params.z, function(err, vectorTile){
-            console.log(err)
-            console.log('GOT VECTORTILE')
-            processVectorTile(vectorTile, function(err, res) {
+            processVectorTile(vectorTile, [request.params.x, request.params.y, request.params.z], function(err, res) {
+                console.timeEnd('vt')
                 if(err){
                     reply(err); // TODO: make this a valid error code
                 } else {
@@ -42,36 +58,54 @@ function getVectorTile(x,y,z, done){
 
     // if the file exists, just pull from the cache
     // add a timeout in the future for realtimey stuff
-    if(!fs.exists(vtFile)) {
-        var options = {
-            url: url,
-            encoding: null
-        }
-        request(options, function(error, response, body) {
-            if(error) {
-                throw error;
+    fs.exists(vtFile, function(vtExists){
+        if(!vtExists) {
+            var options = {
+                url: url,
+                encoding: null
             }
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-                var ab = new ArrayBuffer(body.length);
-                var view = new Uint8Array(ab);
-                for (var i = 0; i < body.length; ++i) {
-                    view[i] = body[i];
+            request(options, function(error, response, body) {
+                if(error) {
+                    throw error;
                 }
-                zlib.gunzip(body, function(err, inflated){
-                    fs.writeFile(vtFile, inflated, function(){
-                       done(null, new VectorTile(new Protobuf(inflated)));
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    var ab = new ArrayBuffer(body.length);
+                    var view = new Uint8Array(ab);
+                    for (var i = 0; i < body.length; ++i) {
+                        view[i] = body[i];
+                    }
+                    zlib.gunzip(body, function(err, inflated){
+                        fs.writeFile(vtFile, inflated, function(){
+                           done(null, new VectorTile(new Protobuf(inflated)));
+                        });
                     });
-                });
-            }
-        });
-    } else {
-        fs.readFile(vtFile, function(err, vectorTile) {
-            return vectorTile;
-        });        
-    }
+                }
+            });
+        } else {
+            fs.readFile(vtFile, function(err, vectorTile) {
+                console.log('getting cache')
+                done(err, new VectorTile(new Protobuf(vectorTile)));
+            });        
+        }
+    })
 }
 
-function processVectorTile(vt, done) {
-
-    done(err, vt)
+function processVectorTile(vt, tile, done) {
+    var buildings = []
+    var numBuldings = vt.layers.building.length
+    for(var i = 0; i < numBuldings; i++) {
+        var building = {}
+        building.properties = vt.layers.building.feature(i).properties;
+        building.geometry = vt.layers.building.feature(i).loadGeometry();
+        traverse(building.geometry).forEach(function(g){
+            if(!Array.isArray(g) && g.x) {
+                //console.log(g)
+                var x = tile[0] + (g.x / 4096)
+                var y = tile[1] + (g.y / 4096)
+                this.update([x,y]);
+            }
+        });
+        buildings.push(building)
+    }
+    done(null, [buildings])
 }

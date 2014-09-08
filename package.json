@@ -13,7 +13,8 @@
     "pbf": "0.0.2",
     "request": "^2.42.0",
     "tile-cover": "^0.3.0",
-    "tilebelt": "^0.2.0",
+    "tilebelt": "^0.5.1",
+    "traverse": "^0.6.6",
     "vector-tile": "^0.1.2",
     "voxel": "0.3.1",
     "voxel-engine": "~0.18.0",
@@ -27,7 +28,7 @@
     "beefy": "0.0.11"
   },
   "scripts": {
-    "start": "beefy test.js:bundle.js 8080",
-    "serve": "node app.js"
+    "start": "node app.js",
+    "build": "browserify test.js -o world/bundle.js"
   }
 }
