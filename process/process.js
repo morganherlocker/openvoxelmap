@@ -1,3 +1,4 @@
+var levelup = require('levelup')
 var zlib = require('zlib');
 var request = require('request');
 var VectorTile = require('vector-tile').VectorTile
@@ -9,21 +10,25 @@ var tilebelt = require('tilebelt')
 var cover = require('tile-cover')
 var bboxPolygon = require('turf-bbox-polygon')
 var queue = require('queue-async')
+var colors = require('colors');
 var log = require('single-line-log').stdout;
 var argv = require('minimist')(process.argv.slice(2));
 var config = require('../config.json');
+
 var vectorTileZoom = 15;
 var zoomEncoding = 25
 var bbox = argv.bbox.split(',')
 var limits = {min_zoom: zoomEncoding, max_zoom: zoomEncoding};
 
-console.log('Processing bbox: %s', bbox)
+console.log('Creating database'.green.bold)
+var db = levelup('./mydb')
 
-console.log('Calculating z15 tiles')
+console.log('Processing bbox: %s'.blue, bbox)
+
+console.log('Calculating z15 tiles'.green.bold)
 var tiles = cover.tiles(bboxPolygon(bbox).geometry, {min_zoom: vectorTileZoom, max_zoom: vectorTileZoom});
 
-console.log('Retrieving the following tiles:')
-console.log(tiles)
+console.log('Retrieving tiles: %s'.blue, tiles)
 
 var vts = [];
 var q = queue(1);
@@ -40,8 +45,6 @@ tiles.forEach(function(tile){
 q.awaitAll(function(){
     console.log(vts.length)
     //console.log(JSON.stringify(vts))
-
-
 })
 
 function getVectorTile(x,y,z, done){
@@ -56,7 +59,7 @@ function getVectorTile(x,y,z, done){
     // add a timeout in the future for realtimey stuff
     fs.exists(vtFile, function(vtExists){
         if(!vtExists) {
-            console.log('tile %s not found, retrieving', x+'/'+y+'/'+z)
+            console.log('tile not found, requesting: %s'.blue, x+'/'+y+'/'+z)
             var options = {
                 url: url,
                 encoding: null
@@ -80,7 +83,7 @@ function getVectorTile(x,y,z, done){
             });
         } else {
             fs.readFile(vtFile, function(err, vectorTile) {
-                console.log('tile %s retrieved from cache',  x+'/'+y+'/'+z)
+                console.log('tile %s retrieved from cache'.blue,  x+'/'+y+'/'+z)
                 done(err, new VectorTile(new Protobuf(vectorTile)));
             });        
         }
@@ -91,15 +94,19 @@ function processVectorTile(vt, tile, done) {
     var buildings = []
     var numBuldings = vt.layers.building.length
 
-    console.log('Processing buildings in tile %s', tile.toString())
+    console.log('Processing buildings in tile %s'.blue, tile.toString())
     var bar = require('progress-bar').create(process.stdout, 80);
-    bar.format = '$bar; $percentage;%'
+    bar.format = '$bar;'.white.bgGreen + ' -- $percentage;%'
+
+    // decode buildings
     for(var i = 0; i < numBuldings; i++) {
         log(i+' of '+numBuldings+' -- '+(i / numBuldings * 100).toFixed(2) + '% complete')
-        bar.update();
+        bar.update((i/numBuldings));
         var building = {}
         building.properties = vt.layers.building.feature(i).properties;
         building.geometry = vt.layers.building.feature(i).loadGeometry();
+
+        // convert z15 4096 encoded geometry to WG84 geojson geometry
         traverse(building.geometry).forEach(function(g){
             if(!Array.isArray(g) && typeof g.x === 'number') {
                 var topLeft = tile;
@@ -119,10 +126,15 @@ function processVectorTile(vt, tile, done) {
             type: 'Polygon',
             coordinates: building.geometry
         }
+
+        // try to encode geometry as voxels
+        // a z25 cover will be 1.12 meter resolution
         try {
             cover.tiles(building.geometry, limits);
-            buildings.push(building)
+            // save tiles to leveldb with building material
+
         } catch(err) {
+            console.log('building failed')
             //console.log('found error in building: %s', JSON.stringify(building));
         }
     }
