@@ -13,31 +13,39 @@ var walk = require('voxel-walk')
 var tilebelt = require('tilebelt')
 var cover = require('tile-cover')
 var request = require('browser-request')
-//var request = require('corslite')
 var VectorTile = require('vector-tile')
-var config = require('./config.json')
-//var zlibjs = require('zlibjs')
-var tileUrl = 'https://a.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6-dev/{z}/{x}/{y}.vector.pbf?access_token='+config.token;
 
+var config = require('./config.json')
+var tileUrl = 'https://a.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6-dev/{z}/{x}/{y}.vector.pbf?access_token='+config.token;
 var playerZoom = 25;
 var startLon = -77.036388;
 var startLat = 38.900646;
 var startingPosition = tilebelt.pointToTile(startLon, startLat, playerZoom);
+var features = [];
 
 module.exports = function(opts, setup) {
   setup = setup || defaultSetup
   var defaults = {
-    generate: function(x,y,z){
+    generate: function(x,y,z,done){
       if(y === 0){
-        return 1
-      } else{
+        return 2
+      } else {
         return 0
       }
+      /*if(!features){
+        getVectorTileFeatures(function(features){
+          generate(x,y,z);
+        })
+      }
+      else {
+
+      }*/
     },
     chunkDistance: 2,
     chunkSize: 16,
-    materials: ['#fff', '#000'],
-    materialFlatColor: true,
+    materials: ['brick', 'grass', 'dirt'],
+    texturePath: 'world/',
+    materialFlatColor: false,
     worldOrigin: [0, 0, 0],
     controls: { discreteFire: true }
   }
@@ -55,10 +63,28 @@ module.exports = function(opts, setup) {
   avatar.yaw.position.set(0, 5, 0)
 
   setup(game, avatar)
-  getVectorTileFeatures(function(){
-    console.log('OK')
-  })
+  
   return game
+}
+
+function generate(x,y,z) {
+  if(y === 0){
+    return 1
+  } else if(y > 0 && y < 2) {
+    var tileCenter = voxelToLonLat(x, z);
+
+  } else {
+    return 0
+  }
+}
+
+function voxelToLonLat(x, z) {
+  var offsetX = x+startingPosition[0];
+  var offsetZ = z+startingPosition[1];
+  var bbox = tilebelt.tileToBBOX([offsetX, offsetZ, playerZoom]);
+  var lon = (bbox[0] + bbox[2])/2;
+  var lat = (bbox[1] + bbox[3])/2;
+  return [lon, lat];
 }
 
 function defaultSetup(game, avatar) {
@@ -113,7 +139,6 @@ function getVectorTileFeatures(done){
   while(tileToLoad[2] > 15){
     tileToLoad = tilebelt.getParent(tileToLoad);
   }
-  //console.log(tileToLoad)
 
   var url = 'http://127.0.0.1:3000/'+tileToLoad[0]
   url += '/'+tileToLoad[1]
