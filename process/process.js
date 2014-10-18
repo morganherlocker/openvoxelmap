@@ -16,12 +16,12 @@ var argv = require('minimist')(process.argv.slice(2));
 var config = require('../config.json');
 
 var vectorTileZoom = 15;
-var zoomEncoding = 25
+var zoomEncoding = 20
 var bbox = argv.bbox.split(',')
 var limits = {min_zoom: zoomEncoding, max_zoom: zoomEncoding};
 
 console.log('Creating database'.green.bold)
-var db = levelup('./mydb')
+var db = levelup(__dirname+'/../data/world')
 
 console.log('Processing bbox: %s'.blue, bbox)
 
@@ -36,15 +36,14 @@ tiles.forEach(function(tile){
     q.defer(function(cb){
         getVectorTile(tile[0], tile[1], tile[2], function(err, vectorTile){
             processVectorTile(vectorTile, tile, function(err, res) {
-                vts.push(res)
+                //vts.push(res)
                 cb();
             })
         })
     })
 })
 q.awaitAll(function(){
-    console.log(vts.length)
-    //console.log(JSON.stringify(vts))
+    console.log('Complete'.green.bold.italic)
 })
 
 function getVectorTile(x,y,z, done){
@@ -100,7 +99,6 @@ function processVectorTile(vt, tile, done) {
 
     // decode buildings
     for(var i = 0; i < numBuldings; i++) {
-        log(i+' of '+numBuldings+' -- '+(i / numBuldings * 100).toFixed(2) + '% complete')
         bar.update((i/numBuldings));
         var building = {}
         building.properties = vt.layers.building.feature(i).properties;
@@ -130,9 +128,17 @@ function processVectorTile(vt, tile, done) {
         // try to encode geometry as voxels
         // a z25 cover will be 1.12 meter resolution
         try {
-            cover.tiles(building.geometry, limits);
-            // save tiles to leveldb with building material
+            var voxelTiles = cover.tiles(building.geometry, limits);
 
+            // encode buildings 5 meters tall
+            voxelTiles.forEach(function(t){
+                for(var y = 1; y < 5; y++) {
+                    //console.log(t.toString())
+                    db.put(t.toString, 1, function (err) {
+                        // tile insert
+                    });
+                }
+            })
         } catch(err) {
             console.log('building failed')
             //console.log('found error in building: %s', JSON.stringify(building));
