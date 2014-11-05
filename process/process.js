@@ -18,6 +18,10 @@ var config = require('../config.json');
 var vectorTileZoom = 15;
 var zoomEncoding = 25;
 var bbox = argv.bbox.split(',');
+bbox = bbox.map(function(coord){
+    return parseFloat(coord)
+})
+
 var limits = {min_zoom: zoomEncoding, max_zoom: zoomEncoding};
 
 console.log('Creating database'.green.bold);
@@ -27,8 +31,7 @@ console.log('Processing bbox: %s'.blue, bbox);
 
 console.log('Calculating z15 tiles'.green.bold);
 var tiles = cover.tiles(bboxPolygon(bbox).geometry, {min_zoom: vectorTileZoom, max_zoom: vectorTileZoom});
-
-console.log('Retrieving tiles: %s'.blue, tiles);
+console.log('Retrieving tiles: %s'.blue, JSON.stringify(tiles));
 
 var vts = [];
 var q = queue(1);
@@ -36,7 +39,6 @@ tiles.forEach(function(tile){
     q.defer(function(cb){
         getVectorTile(tile[0], tile[1], tile[2], function(err, vectorTile){
             processVectorTile(vectorTile, tile, function(err, res) {
-                //vts.push(res)
                 cb();
             });
         });
@@ -99,7 +101,7 @@ function processVectorTile(vt, tile, done) {
 
     // decode buildings
     for(var i = 0; i < numBuldings; i++) {
-        bar.update((i/numBuldings));
+        bar.update(((i+1)/numBuldings));
         var building = {};
         building.properties = vt.layers.building.feature(i).properties;
         building.geometry = vt.layers.building.feature(i).loadGeometry();
@@ -129,8 +131,7 @@ function processVectorTile(vt, tile, done) {
         // a z25 cover will be 1.12 meter resolution
         try {
             var voxelTiles = cover.tiles(building.geometry, limits);
-
-            // encode buildings 5 meters tall
+            // encode buildings 4 meters tall
             voxelTiles.forEach(function(t){
                 for(var y = 1; y < 5; y++) {
                     //console.log(t.toString())
@@ -141,7 +142,6 @@ function processVectorTile(vt, tile, done) {
             })
         } catch(err) {
             console.log('building failed');
-            //console.log('found error in building: %s', JSON.stringify(building));
         }
     }
     done(null, [buildings]);

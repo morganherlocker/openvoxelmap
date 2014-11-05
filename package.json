@@ -19,7 +19,7 @@
     "queue-async": "^1.0.7",
     "request": "^2.42.0",
     "single-line-log": "^0.4.1",
-    "tile-cover": "^0.3.0",
+    "tile-cover": "2.1.0",
     "tilebelt": "^0.5.1",
     "traverse": "^0.6.6",
     "turf-bbox-polygon": "^0.1.5",

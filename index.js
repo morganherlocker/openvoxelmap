@@ -39,7 +39,7 @@ module.exports = function(opts, setup) {
     chunkDistance: 2,
     chunkSize: 16,
     materials: ['brick', 'grass', 'dirt'],
-    texturePath: 'world/',
+    texturePath: '/',
     materialFlatColor: false,
     worldOrigin: [0, 0, 0],
     controls: { discreteFire: true }
