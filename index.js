@@ -12,12 +12,12 @@ var VectorTile = require('vector-tile')
 var Protobuf = require('pbf');
 var turf = require('turf')
 
-var tileUrl = 'https://b.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6/{z}/{x}/{y}.vector.pbf?access_token=pk.eyJ1IjoibW9yZ2FuaGVybG9ja2VyIiwiYSI6Ii1zLU4xOWMifQ.FubD68OEerk74AYCLduMZQ';
 var playerZoom = 24;
-
-var start = 
-[-77.04496532678604,
-          38.91961359883852]
+var start = window.location.search
+  .split('?')
+  .join('')
+  .split('/')
+  .map(function(c){return parseFloat(c)});
 
 var startLon = start[0]
 var startLat = start[1]
@@ -108,87 +108,77 @@ console.log('start', startTile)
 getVectorTile(startTile,function(){console.log('complete')})
 
 function getVectorTile(t, done){
-    var x = t[0]
-    var y = t[1]
-    var z = t[2]
-    console.log('requesting: %s', x+'/'+y+'/'+z)
+  var x = t[0]
+  var y = t[1]
+  var z = t[2]
+  console.log('requesting: %s', x+'/'+y+'/'+z)
 
-    // buildings
-    var tileUrl = 'http://tile.openstreetmap.us/vectiles-buildings/{z}/{x}/{y}.json'
-    var url = tileUrl.split('{x}').join(x);
-    url = url.split('{y}').join(y);
-    url = url.split('{z}').join(z);
+  // buildings
+  var tileUrl = 'http://tile.openstreetmap.us/vectiles-buildings/{z}/{x}/{y}.json'
+  var url = tileUrl.split('{x}').join(x);
+  url = url.split('{y}').join(y);
+  url = url.split('{z}').join(z);
 
-    var options = {
-        url: url,
-        encoding: null
-    }
-    request(options, function(error, response, body) {
-        if(error) {
-            throw error;
-        }
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-            addBuildings(JSON.parse(body))
-        }
-    });
+  var options = {
+      url: url,
+      encoding: null
+  }
+  request(options, function(error, response, body) {
+      if(error) {
+          throw error;
+      }
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+          addBuildings(JSON.parse(body))
+      }
+  });
 
-    // roads
-    var tileUrl = 'http://tile.openstreetmap.us/vectiles-highroad/{z}/{x}/{y}.json'
-    var url = tileUrl.split('{x}').join(x);
-    url = url.split('{y}').join(y);
-    url = url.split('{z}').join(z);
+  // roads
+  var tileUrl = 'http://tile.openstreetmap.us/vectiles-highroad/{z}/{x}/{y}.json'
+  var url = tileUrl.split('{x}').join(x);
+  url = url.split('{y}').join(y);
+  url = url.split('{z}').join(z);
 
-    var options = {
-        url: url,
-        encoding: null
-    }
-    request(options, function(error, response, body) {
-        if(error) {
-            throw error;
-        }
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-            addRoads(JSON.parse(body))
-        }
-    });
+  var options = {
+      url: url,
+      encoding: null
+  }
+  request(options, function(error, response, body) {
+      if(error) {
+          throw error;
+      }
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+          addRoads(JSON.parse(body))
+      }
+  });
 }
 
 function addBuildings(fc) {
-    var pixZ = playerZoom
-    fc.features.forEach(function(f){
-      var tiles = cover.tiles(f.geometry, {min_zoom: pixZ, max_zoom: pixZ})  
-      tiles.forEach(function(tile){
-        var x =tile[0]-startingPosition[0]
-        var y =tile[1]-startingPosition[1]
+  var pixZ = playerZoom
+  fc.features.forEach(function(f){
+    var tiles = cover.tiles(f.geometry, {min_zoom: pixZ, max_zoom: pixZ})  
+    tiles.forEach(function(tile){
+      var x =tile[0]-startingPosition[0]
+      var y =tile[1]-startingPosition[1]
 
-        for(var i=1; i<6; i++){
-          game.setBlock([x, i , y], 3)
-          tileHash[x+'/'+i+'/'+y] = 3
-        }
-      })
+      for(var i=1; i<6; i++){
+        game.setBlock([x, i , y], 3)
+        tileHash[x+'/'+i+'/'+y] = 3
+      }
     })
+  })
 }
 
 function addRoads(fc) {
-    var pixZ = playerZoom
-    fc.features.forEach(function(f){
-      f = turf.buffer(f, 0.00278788, 'miles').features[0]
-      // draw center of roads
-      var tiles = cover.tiles(f.geometry, {min_zoom: pixZ, max_zoom: pixZ})  
-      tiles.forEach(function(tile){
-        var x =tile[0]-startingPosition[0]
-        var y =tile[1]-startingPosition[1]
-        game.setBlock([x, 0 , y], 2)
-        tileHash[x+'/0/'+y] = 2
-      })
-
-      // draw sidewalks
-      //console.log(JSON.stringify(turf.linestring(f.geometry.coordinates[0])))
-      /*var tiles = cover.tiles(turf.linestring(f.geometry.coordinates[0]).geometry, {min_zoom: pixZ, max_zoom: pixZ})  
-      tiles.forEach(function(tile){
-        var x = tile[0]-startingPosition[0]
-        var y = tile[1]-startingPosition[1]
-        game.setBlock([x, 0 , y], 4)
-        tileHash[x+'/0/'+y] = 4
-      })*/
+  var pixZ = playerZoom
+  fc.features.forEach(function(f){
+    f = turf.buffer(f, 0.002, 'miles').features[0]
+    // draw center of roads
+    var tiles = cover.tiles(f.geometry, {min_zoom: pixZ, max_zoom: pixZ})  
+    tiles.forEach(function(tile){
+      var x =tile[0]-startingPosition[0]
+      var y =tile[1]-startingPosition[1]
+      game.setBlock([x, 0 , y], 2)
+      tileHash[x+'/0/'+y] = 2
     })
+  })
 }
