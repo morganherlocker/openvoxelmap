@@ -1,51 +1,38 @@
-voxel-openstreetmap
-===================
+# voxel-hello-world
 
-Work in progress implementation of https://gist.github.com/morganherlocker/dab817600918f7e32407
+Learn more at http://voxeljs.com
 
-The general idea is to create a walkable voxel openstreetmap world at ~1 meter resolution.
+# Using it as a module
 
+`npm install voxel-hello-world`
 
-#Process
-```sh
-# DC
-node process/process.js --bbox=-77.03665316104889,38.90377902232378,-77.0346200466156,38.90565756719343 
-
-# larger DC
-node process/process.js --bbox=-77.05329895019531,38.89664427352471,-77.02325820922852,38.91634762833962
-
-# charleston, sc
-node process/process.js --bbox=-79.93553102016449,32.773496033412975,-79.93417918682098,32.77452442019409
-
-# charleston large
-node process/process.js --bbox=-79.9365234375,32.77212032198862,-79.9306869506836,32.776811185047144
+```javascript
+var game = require('voxel-hello-world')
 ```
 
-#running
+# Get it running on your machine
 
-```sh
-git clone https://github.com/morganherlocker/voxel-openstreetmap.git
-cd voxel-openstreetmap
+The first time you set up, you should install the required npm packages:
+
 ```
-
-create a config.json file that looks like this:
-
-```json
-{
-	"token": "<my mapbox gl token>"
-}
-```
-
-```sh
+cd voxel-hello-world
 npm install
 ```
 
-```sh
+Then run the start script:
+
+```
 npm start
 ```
 
-```sh
-npm run serve
-```
+Then point your browser to [http://localhost:8080](http://localhost:8080) and have fun!
 
-open your browser to 127.0.0.1:8080
+## How does this work?
+
+voxel.js modules use [browserify](http://browserify.org) for packaging modules together into game bundles. This means that every time you change code in your game you have to build a new bundle in order to test it out. Luckily this is very easy and is automated. When you run the `npm start` script, it runs a local server: when the browser requests `index.js`, it compiles it serverside and then serves up the compiled version.
+
+The upshot is, as long as you're running the `npm start` script in the background, you can save your changes to index.js and reload the game to see the new code in action, without having to have a build step in between. (If you'd like to change the start script, it's contained in the `package.json` file in the root directory.)
+
+## license
+
+BSD
