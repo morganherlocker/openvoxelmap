@@ -41,13 +41,15 @@ module.exports = function(opts, setup) {
   setup = setup || defaultSetup;
   var defaults = {
     generate: function(x,y,z){
+      //if(y === 0) return 1
       if(tileHash[x+'/'+y+'/'+z]) {
-        return tileHash[x+'/'+y+'/'+z];
+        if(tileHash[x+'/'+y+'/'+z]>0) return tileHash[x+'/'+y+'/'+z];
+        else return 0;
       } else if(y === 0){
         return 1;
       } 
     },
-    chunkDistance: 2,
+    chunkDistance: 3,
     materials: render.materials,
     materialFlatColor: true,
     worldOrigin: [0, 0, 0],
@@ -107,16 +109,18 @@ function defaultSetup(game, avatar) {
   });
 
   game.on('tick', function() {
-    walk.render(target.playerSkin);
+    //walk.render(target.playerSkin);
     var vx = Math.abs(target.velocity.x);
     var vz = Math.abs(target.velocity.z);
     if (vx > 0.001 || vz > 0.001) walk.stopWalking();
     else walk.startWalking();
   });
 
-  game.voxels.on('missingChunk', function(){
-
+  game.voxels.on('missingChunk', function(chunk){
+    //console.log(chunk)
   })
+
+  //game.on('renderChunk', function(chunk) {})
 }
 
 getVectorTile(startTile, startPlayerTile, function(){console.log('complete');});
@@ -145,8 +149,10 @@ function getVectorTile(t, done){
         }
         var voxels = render[layer](fc, startPlayerTile);
           voxels.forEach(function(v){
-            game.setBlock([v[0], v[1], v[2]], v[3]);
-            tileHash[v[0]+'/'+v[1]+'/'+v[2]] = v[3];
+            if(tileHash[v[0]+'/'+v[1]+'/'+v[2]] !== -1){
+              game.setBlock([v[0], v[1], v[2]], v[3]);
+              tileHash[v[0]+'/'+v[1]+'/'+v[2]] = v[3];
+            }
           });
       } else console.log(layer);
     });

@@ -435,199 +435,183 @@ process.binding = function (name) {
 require.define("/package.json",function(require,module,exports,__dirname,__filename,process,global){module.exports = {}
 });
 
-require.define("/index.js",function(require,module,exports,__dirname,__filename,process,global){var createGame = require('voxel-engine')
-var highlight = require('voxel-highlight')
-var player = require('voxel-player')
-var voxel = require('voxel')
-var extend = require('extend')
-var fly = require('voxel-fly')
-var walk = require('voxel-walk')
-var tilebelt = require('tilebelt')
-var cover = require('tile-cover')
-var request = require('browser-request')
-var VectorTile = require('vector-tile')
-var Protobuf = require('pbf');
-var turf = require('turf')
+require.define("/index.js",function(require,module,exports,__dirname,__filename,process,global){var createGame = require('voxel-engine');
+var highlight = require('voxel-highlight');
+var player = require('voxel-player');
+var voxel = require('voxel');
+var extend = require('extend');
+var fly = require('voxel-fly');
+var walk = require('voxel-walk');
+var tilebelt = require('tilebelt');
+var cover = require('tile-cover');
+var request = require('browser-request');
+var VectorTile = require('vector-tile').VectorTile;
+var Pbf = require('pbf');
+var turf = require('turf');
+var render = require('./render');
 
 var tileUrl = 'https://b.tiles.mapbox.com/v4/mapbox.mapbox-streets-v6/{z}/{x}/{y}.vector.pbf?access_token=pk.eyJ1IjoibW9yZ2FuaGVybG9ja2VyIiwiYSI6Ii1zLU4xOWMifQ.FubD68OEerk74AYCLduMZQ';
+var tileZoom = 15;
 var playerZoom = 24;
+var tilesLoaded = {};
+var start = window.location.search
+  .split('?')
+  .join('')
+  .split('/')
+  .map(function(c){return parseFloat(c);});
 
-var start = 
-[-77.04496532678604,
-          38.91961359883852]
+if(!start[0] || !start[1]) {
+  start = [
+    -87.61776924133301,
+    41.88595297756726
+    ];
+}
 
-var startLon = start[0]
-var startLat = start[1]
-var startingPosition = tilebelt.pointToTile(startLon, startLat, playerZoom);
+var startLon = start[0];
+var startLat = start[1];
+var startTile = tilebelt.pointToTile(startLon, startLat, tileZoom);
+var startPlayerTile = tilebelt.pointToTile(startLon, startLat, playerZoom);
 
 var tileHash = {};
 
 module.exports = function(opts, setup) {
-  setup = setup || defaultSetup
+  setup = setup || defaultSetup;
   var defaults = {
     generate: function(x,y,z){
+      //if(y === 0) return 1
       if(tileHash[x+'/'+y+'/'+z]) {
-        return tileHash[x+'/'+y+'/'+z]
+        if(tileHash[x+'/'+y+'/'+z]>0) return tileHash[x+'/'+y+'/'+z];
+        else return 0;
       } else if(y === 0){
-        return 1
+        return 1;
       } 
     },
-    chunkDistance: 2,
-    materials: ['#8BA870', '#AAAAAA', '#f5f5dc', '#E8E8E8', '#0ff'],
+    chunkDistance: 3,
+    materials: render.materials,
     materialFlatColor: true,
     worldOrigin: [0, 0, 0],
     controls: { discreteFire: true }
-  }
+  };
 
-  opts = extend({}, defaults, opts || {})
-  var game = createGame(opts)
-  var container = opts.container || document.body
-  window.game = game 
-  game.appendTo(container)
-  if (game.notCapable()) return game
+  opts = extend({}, defaults, opts || {});
+  var game = createGame(opts);
+  var container = opts.container || document.body;
+  window.game = game;
+  game.appendTo(container);
+  if (game.notCapable()) return game;
   
-  var createPlayer = player(game)
-  var avatar = createPlayer(opts.playerSkin || 'player.png')
-  avatar.possess()
-  avatar.yaw.position.set(0, 10, 0)
-  game.setBlock([0, 13 , 0], 5)
-  game.setBlock([0, 14 , 0], 5)
-  game.setBlock([0, 15 , 0], 5)
+  var createPlayer = player(game);
+  var avatar = createPlayer(opts.playerSkin || 'player.png');
+  avatar.possess();
+  avatar.yaw.position.set(0, 10, 0);
+  game.setBlock([0, 13 , 0], 5);
+  game.setBlock([0, 14 , 0], 5);
+  game.setBlock([0, 15 , 0], 5);
 
   setup(game, avatar);
-  return game
-}
+  return game;
+};
 
 function defaultSetup(game, avatar) {
-  var makeFly = fly(game)
-  var target = game.controls.target()
-  game.flyer = makeFly(target)
+  var makeFly = fly(game);
+  var target = game.controls.target();
+  game.flyer = makeFly(target);
   
   // highlight blocks when you look at them, hold <Ctrl> for block placement
-  var blockPosPlace, blockPosErase
-  var hl = game.highlighter = highlight(game, { color: 0xff0000 })
-  hl.on('highlight', function (voxelPos) { blockPosErase = voxelPos })
-  hl.on('remove', function (voxelPos) { blockPosErase = null })
-  hl.on('highlight-adjacent', function (voxelPos) { blockPosPlace = voxelPos })
-  hl.on('remove-adjacent', function (voxelPos) { blockPosPlace = null })
+  var blockPosPlace, blockPosErase;
+  var hl = game.highlighter = highlight(game, { color: 0xff0000 });
+  hl.on('highlight', function (voxelPos) { blockPosErase = voxelPos; });
+  hl.on('remove', function (voxelPos) { blockPosErase = null; });
+  hl.on('highlight-adjacent', function (voxelPos) { blockPosPlace = voxelPos; });
+  hl.on('remove-adjacent', function (voxelPos) { blockPosPlace = null; });
 
   // toggle between first and third person modes
   window.addEventListener('keydown', function (ev) {
-    if (ev.keyCode === 'R'.charCodeAt(0)) avatar.toggle()
-  })
+    if (ev.keyCode === 'R'.charCodeAt(0)) avatar.toggle();
+  });
 
   // block interaction stuff, uses highlight data
-  var currentMaterial = 1
+  var currentMaterial = 1;
 
   game.on('fire', function (target, state) {
-    var position = blockPosPlace
+    var position = blockPosPlace;
 
     if (position) {
-      game.createBlock(position, currentMaterial)
+      game.createBlock(position, currentMaterial);
     }
     else {
-      position = blockPosErase
-      if (position) game.setBlock(position, 0)
+      position = blockPosErase;
+      if (position) game.setBlock(position, 0);
     }
-  })
+  });
 
   game.on('tick', function() {
-    walk.render(target.playerSkin)
-    var vx = Math.abs(target.velocity.x)
-    var vz = Math.abs(target.velocity.z)
-    if (vx > 0.001 || vz > 0.001) walk.stopWalking()
-    else walk.startWalking()
+    //walk.render(target.playerSkin);
+    var vx = Math.abs(target.velocity.x);
+    var vz = Math.abs(target.velocity.z);
+    if (vx > 0.001 || vz > 0.001) walk.stopWalking();
+    else walk.startWalking();
+  });
+
+  game.voxels.on('missingChunk', function(chunk){
+    //console.log(chunk)
   })
+
+  //game.on('renderChunk', function(chunk) {})
 }
 
-var startTile = tilebelt.pointToTile(startLon, startLat, 15)
-console.log('start', startTile)
-getVectorTile(startTile,function(){console.log('complete')})
+getVectorTile(startTile, startPlayerTile, function(){console.log('complete');});
 
 function getVectorTile(t, done){
-    var x = t[0]
-    var y = t[1]
-    var z = t[2]
-    console.log('requesting: %s', x+'/'+y+'/'+z)
+  var x = t[0];
+  var y = t[1];
+  var z = t[2];
+  console.log('requesting: %s', x+'/'+y+'/'+z);
 
-    // buildings
-    var tileUrl = 'http://tile.openstreetmap.us/vectiles-buildings/{z}/{x}/{y}.json'
-    var url = tileUrl.split('{x}').join(x);
-    url = url.split('{y}').join(y);
-    url = url.split('{z}').join(z);
 
-    var options = {
-        url: url,
-        encoding: null
-    }
-    request(options, function(error, response, body) {
-        if(error) {
-            throw error;
+  // select vector tile
+  var url = tileUrl.split('{x}').join(x);
+  url = url.split('{y}').join(y);
+  url = url.split('{z}').join(z);
+
+  getArrayBuffer(url, function(err, data) { 
+    var vt = new VectorTile(new Pbf(new Uint8Array(data)));
+    var layers = Object.keys(vt.layers);
+
+    layers.forEach(function(layer){
+      if(render[layer]) {
+        var fc = turf.featurecollection([]);
+        for(var i = 0; i < vt.layers[layer].length; i++){
+          fc.features.push(vt.layers[layer].feature(i).toGeoJSON(x,y,z));
         }
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-            addBuildings(JSON.parse(body))
-        }
+        var voxels = render[layer](fc, startPlayerTile);
+          voxels.forEach(function(v){
+            if(tileHash[v[0]+'/'+v[1]+'/'+v[2]] !== -1){
+              game.setBlock([v[0], v[1], v[2]], v[3]);
+              tileHash[v[0]+'/'+v[1]+'/'+v[2]] = v[3];
+            }
+          });
+      } else console.log(layer);
     });
-
-    // roads
-    var tileUrl = 'http://tile.openstreetmap.us/vectiles-highroad/{z}/{x}/{y}.json'
-    var url = tileUrl.split('{x}').join(x);
-    url = url.split('{y}').join(y);
-    url = url.split('{z}').join(z);
-
-    var options = {
-        url: url,
-        encoding: null
-    }
-    request(options, function(error, response, body) {
-        if(error) {
-            throw error;
-        }
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-            addRoads(JSON.parse(body))
-        }
-    });
+  });
 }
 
-function addBuildings(fc) {
-    var pixZ = playerZoom
-    fc.features.forEach(function(f){
-      var tiles = cover.tiles(f.geometry, {min_zoom: pixZ, max_zoom: pixZ})  
-      tiles.forEach(function(tile){
-        var x =tile[0]-startingPosition[0]
-        var y =tile[1]-startingPosition[1]
-
-        for(var i=1; i<6; i++){
-          game.setBlock([x, i , y], 3)
-          tileHash[x+'/'+i+'/'+y] = 3
+function getArrayBuffer(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.onerror = function(e) {
+        callback(e);
+    };
+    xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
+            callback(null, xhr.response);
+        } else {
+            callback(new Error(xhr.statusText));
         }
-      })
-    })
-}
-
-function addRoads(fc) {
-    var pixZ = playerZoom
-    fc.features.forEach(function(f){
-      f = turf.buffer(f, 0.00278788, 'miles').features[0]
-      // draw center of roads
-      var tiles = cover.tiles(f.geometry, {min_zoom: pixZ, max_zoom: pixZ})  
-      tiles.forEach(function(tile){
-        var x =tile[0]-startingPosition[0]
-        var y =tile[1]-startingPosition[1]
-        game.setBlock([x, 0 , y], 2)
-        tileHash[x+'/0/'+y] = 2
-      })
-
-      // draw sidewalks
-      //console.log(JSON.stringify(turf.linestring(f.geometry.coordinates[0])))
-      /*var tiles = cover.tiles(turf.linestring(f.geometry.coordinates[0]).geometry, {min_zoom: pixZ, max_zoom: pixZ})  
-      tiles.forEach(function(tile){
-        var x = tile[0]-startingPosition[0]
-        var y = tile[1]-startingPosition[1]
-        game.setBlock([x, 0 , y], 4)
-        tileHash[x+'/0/'+y] = 4
-      })*/
-    })
+    };
+    xhr.send();
+    return xhr;
 }
 });
 
@@ -74472,6 +74456,297 @@ function hexagon(center, radius) {
   vertices.push(vertices[0]);
   return polygon([vertices]);
 }
+});
+
+require.define("/render.js",function(require,module,exports,__dirname,__filename,process,global){var cover = require('tile-cover');
+var turf = require('turf');
+var flatten = require('geojson-flatten')
+var normalize = require('geojson-normalize')
+
+var materials = ['#8BA870', '#5E5E5E', '#f5f5dc', '#E8E8E8', '#0ff', '#AD664C', '#99ccff', '#575757', '#4A7023', '#488214', 
+'#aaaaaa', '#EEB4B4', '#EEE9E9',// 11-13
+'#ffffcc','#e0f2f6','#efe8d5','#e8efd5','#ebe3cb', // 14 - 18
+'#5C3317', //19
+'#fff', '#f00', //20-21
+'#C0C0C0', '#F5F5F5', //22-23
+'#f2f8ff' //24
+];
+
+function building (fc, start) {
+  var voxels = [];
+  fc.features.forEach(function(f){
+    var color = getRandomInt(14, 18);
+    var roofColor = getRandomInt(11, 13);
+    var height = getRandomInt(5,10);
+    var walls = turf.linestring(f.geometry.coordinates[0]);
+    var windowProbablility = getRandomInt(3, 7);
+    cover.tiles(walls.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+      for(var i=1; i<height; i++){
+        if(!(i%3 === 0 && (tile[0]%windowProbablility === 0 || tile[1]%windowProbablility === 0))) 
+          voxels.push([tile[0]-start[0], i, tile[1]-start[1], color]);
+        else voxels.push([tile[0]-start[0], i, tile[1]-start[1], 24]);
+      }
+    });
+    cover.tiles(f.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+        voxels.push([tile[0]-start[0], 0+height, tile[1]-start[1], roofColor]);
+    });
+
+    try {
+      cover.tiles(turf.buffer(f, -0.001, 'miles').features[0].geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+          voxels.push([tile[0]-start[0], 1+height, tile[1]-start[1], roofColor]);
+      });
+    } catch(e){}
+    try {
+      cover.tiles(turf.buffer(f, -0.002, 'miles').features[0].geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+          voxels.push([tile[0]-start[0], 2+height, tile[1]-start[1], roofColor]);
+      });
+    } catch(e){}
+    try {
+      cover.tiles(turf.buffer(f, -0.003, 'miles').features[0].geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+          voxels.push([tile[0]-start[0], 3+height, tile[1]-start[1], roofColor]);
+      });
+    } catch(e){}
+  });
+  return voxels;
+}
+
+function water (fc, start) {
+  var voxels = [];
+  fc.features.forEach(function(f){
+    var tiles = cover.tiles(f.geometry, {min_zoom: start[2], max_zoom: start[2]});
+    tiles.forEach(function(tile){
+      voxels.push([tile[0]-start[0], -1, tile[1]-start[1], 7]);
+      voxels.push([tile[0]-start[0], 0, tile[1]-start[1], -1]);
+    });
+  });
+  return voxels;
+}
+
+function road (fc, start) {
+  var voxels = [];
+  fc.features.forEach(function(f){
+    f = turf.buffer(f, 0.002, 'miles').features[0];
+    cover.tiles(f.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+      voxels.push([tile[0]-start[0], 0, tile[1]-start[1], 2]);
+    });
+  });
+  return voxels;
+}
+
+function bridge (fc, start) {
+  var voxels = [];
+  fc.features.forEach(function(f){
+    f = turf.buffer(f, 0.001, 'miles').features[0];
+    cover.tiles(f.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+      voxels.push([tile[0]-start[0], 1, tile[1]-start[1], 6]);
+    });
+  });
+  return voxels;
+}
+
+function tunnel (fc, start) {
+  var voxels = [];
+  var radius = 0.004;
+  var units = 'miles';
+
+  var polys = turf.featurecollection(fc.features.map(function(line){
+    return turf.buffer(line, radius, units).features[0]
+  }))
+  polys = normalize(turf.merge(polys));
+
+  polys.features.forEach(function(multipoly){
+    // floors
+    cover.tiles(multipoly.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+      voxels.push([tile[0]-start[0], -5, tile[1]-start[1], 8]);
+    });
+
+    // walls
+    multipoly.geometry.coordinates.forEach(function(polyCoords){
+      polyCoords.forEach(function(ring){
+        cover.tiles(turf.linestring(ring).geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+          for(var i=1; i<5; i++){
+            voxels.push([tile[0]-start[0], 0-i, tile[1]-start[1], 20]);
+          }
+        });
+      })
+    })
+  })
+
+  fc = normalize(fc)
+  fc.features.forEach(function(line){
+    var first = turf.point(line.geometry.coordinates[0]);
+    cover.tiles(first.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
+      // poll
+      for(var i=1; i<4; i++){
+        voxels.push([tile[0]-start[0], i, tile[1]-start[1], 20]);
+      }
+      voxels.push([tile[0]-start[0], 4, tile[1]-start[1], 21]);
+
+      for(var i=1; i<= 7; i++){
+        // entrance
+        voxels.push([tile[0]-start[0]+i, 0, tile[1]-start[1], -1]);
+        voxels.push([tile[0]-start[0]+i, 1, tile[1]-start[1], -1]);
+        // rails
+        voxels.push([tile[0]-start[0]+i, 1, tile[1]-start[1]+1, 20]);
+        voxels.push([tile[0]-start[0]+i, 1, tile[1]-start[1]-1, 20]);
+        // steps
+        for(var k=1; k<= i; k++){
+          voxels.push([tile[0]-start[0]+i, (-6)+k, tile[1]-start[1], 23]);
+          voxels.push([tile[0]-start[0]+i, (-6)+k, tile[1]-start[1]+1, 22]);
+          voxels.push([tile[0]-start[0]+i, (-6)+k, tile[1]-start[1]-1, 22]);
+        }
+      }
+    });
+  });
+
+  return voxels;
+}
+
+function landuse (fc, start) {
+  var voxels = [];
+  fc.features.forEach(function(f){
+    var tiles = cover.tiles(f.geometry, {min_zoom: start[2], max_zoom: start[2]});
+    tiles.forEach(function(tile){
+      voxels.push([tile[0]-start[0], 0, tile[1]-start[1], 10]);
+    });
+
+    // add a tree on randomly sampled tiles
+    var sampleNum = Math.round(0.01 * tiles.length);
+    var shuffledTiles = tiles.slice(0), i = tiles.length, min = i - sampleNum, temp, index;
+    while (i-- > min) {
+        index = Math.floor((i + 1) * Math.random());
+        temp = shuffledTiles[index];
+        shuffledTiles[index] = shuffledTiles[i];
+        shuffledTiles[i] = temp;
+    }
+    var tileSamples = shuffledTiles.slice(min);
+    tileSamples.forEach(function(tile){
+      // trunk
+      var height = getRandomInt(3,7);
+      for(var i=1; i<height; i++){
+        voxels.push([tile[0]-start[0], i, tile[1]-start[1], 19]);
+      }
+      //leaves
+      for(var j = Math.round(height/3)*(-1); j<=Math.round(height/3); j++) {
+        for(var k = Math.round(height/3)*(-1); k<=Math.round(height/3); k++) {
+          if(Math.random() > 0.5) voxels.push([tile[0]-start[0]+j, height, tile[1]-start[1]+k, 9]);
+          if(Math.random() > 0.2) voxels.push([tile[0]-start[0]+j, height+1, tile[1]-start[1]+k, 9]);
+          if(Math.random() > 0.3) voxels.push([tile[0]-start[0]+j, height+2, tile[1]-start[1]+k, 9]);
+        }
+      }
+    });
+  });
+  return voxels;
+}
+
+module.exports = {
+  building: building,
+  water: water,
+  road: road,
+  bridge: bridge,
+  tunnel: tunnel,
+  landuse: landuse,
+  materials: materials
+};
+
+
+function getRandomInt (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+});
+
+require.define("/node_modules/geojson-flatten/package.json",function(require,module,exports,__dirname,__filename,process,global){module.exports = {"main":"index.js"}
+});
+
+require.define("/node_modules/geojson-flatten/index.js",function(require,module,exports,__dirname,__filename,process,global){module.exports = flatten;
+
+function flatten(gj, up) {
+    switch ((gj && gj.type) || null) {
+        case 'FeatureCollection':
+            gj.features = gj.features.reduce(function(mem, feature) {
+                return mem.concat(flatten(feature));
+            }, []);
+            return gj;
+        case 'Feature':
+            return flatten(gj.geometry).map(function(geom) {
+                return {
+                    type: 'Feature',
+                    properties: JSON.parse(JSON.stringify(gj.properties)),
+                    geometry: geom
+                };
+            });
+        case 'MultiPoint':
+            return gj.coordinates.map(function(_) {
+                return { type: 'Point', coordinates: _ };
+            });
+        case 'MultiPolygon':
+            return gj.coordinates.map(function(_) {
+                return { type: 'Polygon', coordinates: _ };
+            });
+        case 'MultiLineString':
+            return gj.coordinates.map(function(_) {
+                return { type: 'LineString', coordinates: _ };
+            });
+        case 'GeometryCollection':
+            return gj.geometries;
+        case 'Point':
+        case 'Polygon':
+        case 'LineString':
+            return [gj];
+        default:
+            return gj;
+    }
+}
+
+});
+
+require.define("/node_modules/geojson-normalize/package.json",function(require,module,exports,__dirname,__filename,process,global){module.exports = {"main":"index.js"}
+});
+
+require.define("/node_modules/geojson-normalize/index.js",function(require,module,exports,__dirname,__filename,process,global){module.exports = normalize;
+
+var types = {
+    Point: 'geometry',
+    MultiPoint: 'geometry',
+    LineString: 'geometry',
+    MultiLineString: 'geometry',
+    Polygon: 'geometry',
+    MultiPolygon: 'geometry',
+    GeometryCollection: 'geometry',
+    Feature: 'feature',
+    FeatureCollection: 'featurecollection'
+};
+
+/**
+ * Normalize a GeoJSON feature into a FeatureCollection.
+ *
+ * @param {object} gj geojson data
+ * @returns {object} normalized geojson data
+ */
+function normalize(gj) {
+    if (!gj || !gj.type) return null;
+    var type = types[gj.type];
+    if (!type) return null;
+
+    if (type === 'geometry') {
+        return {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                properties: {},
+                geometry: gj
+            }]
+        };
+    } else if (type === 'feature') {
+        return {
+            type: 'FeatureCollection',
+            features: [gj]
+        };
+    } else if (type === 'featurecollection') {
+        return gj;
+    }
+}
+
 });
 
 require.define("/test.js",function(require,module,exports,__dirname,__filename,process,global){require('./')()
