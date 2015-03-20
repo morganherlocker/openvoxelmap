@@ -24,10 +24,7 @@ var start = window.location.search
   .map(function(c){return parseFloat(c);});
 
 if(!start[0] || !start[1]) {
-  start = [
-    -87.61776924133301,
-    41.88595297756726
-    ];
+  window.location = '/';
 }
 
 var startLon = start[0];
@@ -118,7 +115,7 @@ function defaultSetup(game, avatar) {
 
   game.voxels.on('missingChunk', function(chunk){
     //console.log(chunk)
-  })
+  });
 
   //game.on('renderChunk', function(chunk) {})
 }

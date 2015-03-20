@@ -1,39 +1,73 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang='en'>
   <head>
     <title>OpenVoxelMap</title>
-    <meta charset="utf-8">
-    <style type="text/css">
-      body {
-        font-family: Monospace;
-        font-size: 12px;
-        background-color: #f0f0f0;
-        margin: 0px;
-        overflow: hidden;
+    <meta charset='utf-8'>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.5.0/lodash.js'></script>
+    <script type='text/javascript' src='https://code.jquery.com/jquery-2.1.3.min.js'></script>
+    <style type='text/css'>
+    body {
+      padding-top: 5%;
+      padding-left: 30%;
+      padding-right: 30%;
+      font: 18px "", Helvetica, Arial, sans-serif;
+    }
+    input {
+      width: 100%;
+      height: 40px;
+      color:#404040;
+      color:rgba(0,0,0,0.75);
+      font: 27px "", Helvetica, Arial, sans-serif;
+      padding: 6px;
+    }
+    input:focus { 
+      outline: 1px solid #a8a8a8;
+      border: 0px;
+    }
+    a {
+      color:#00cc00;
+      text-decoration:none;
+    }
+    @media screen and (max-width: 1000px){
+      body{
+        padding-left: 15%;
+        padding-right: 15%;
       }
-      #container {
-        -moz-user-select: none;
-        -webkit-user-select: none;
-        user-select: none;
+    }
+    @media screen and (max-width: 765px){
+      body{
+        padding-left: 5%;
+        padding-right: 5%;
       }
-      #crosshair {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        margin: -16px 0 0 -16px;
-        width: 32px;
-        height: 32px;
-      }
-
-      #stats { bottom: 0px; right: 0px; }
-      .bar-tab { right: 33% !important; left: 33% !important; }
-      .logo {position: absolute; top: 5px; left: 5px; }
-      .errorMessage { text-align: center; width: 200px; margin: 20px auto; }
+    }
+    #results {
+      padding: 20px;
+    }
     </style>
   </head>
   <body>
-    <div id="container"></div>
-    <div id="crosshair"><img src="crosshair.png"/></div>
-    <script type="text/javascript" src="bundle.js"></script>
+    <script type='text/javascript'>
+      var url = 'http://api.tiles.mapbox.com/v4/geocode/mapbox.places/{query}.json?access_token=pk.eyJ1IjoibW9yZ2FuaGVybG9ja2VyIiwiYSI6Ii1zLU4xOWMifQ.FubD68OEerk74AYCLduMZQ'
+      function keyup () {
+        var query = document.getElementById('query').value
+        if(query.length > 3){
+          $.get(url.split('{query}').join(query), function(data){
+            var res = ''
+            data.features.forEach(function(f){
+              res+='<p><a href="/world/?'+f.center[0]+'/'+f.center[1]+'">'
+              res+=f.place_name
+              res+='</p></a>'
+            })
+            document.getElementById('results').innerHTML = res;
+          })
+        } else document.getElementById('results').innerHTML = '';
+      }
+    </script>
+    <div class='col12 clearfix'>
+      <h1 class='col12'>OpenVoxelMap</h1>
+      <h3 class='col12'>Enter a location</h3>
+      <input id='query' class='col12' type='text' onkeyup='_.debounce(keyup, 1500)();'  autofocus='autofocus'>
+      <p id='results'></p>
+    </div>
   </body>
 </html>

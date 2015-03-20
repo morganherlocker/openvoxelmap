@@ -1,7 +1,7 @@
 var cover = require('tile-cover');
 var turf = require('turf');
-var flatten = require('geojson-flatten')
-var normalize = require('geojson-normalize')
+var flatten = require('geojson-flatten');
+var normalize = require('geojson-normalize');
 
 var materials = ['#8BA870', '#5E5E5E', '#f5f5dc', '#E8E8E8', '#0ff', '#AD664C', '#99ccff', '#575757', '#4A7023', '#488214', 
 '#aaaaaa', '#EEB4B4', '#EEE9E9',// 11-13
@@ -90,14 +90,15 @@ function tunnel (fc, start) {
   var units = 'miles';
 
   var polys = turf.featurecollection(fc.features.map(function(line){
-    return turf.buffer(line, radius, units).features[0]
-  }))
+    return turf.buffer(line, radius, units).features[0];
+  }));
   polys = normalize(turf.merge(polys));
 
   polys.features.forEach(function(multipoly){
     // floors
     cover.tiles(multipoly.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
       voxels.push([tile[0]-start[0], -5, tile[1]-start[1], 8]);
+      voxels.push([tile[0]-start[0], -1, tile[1]-start[1], 8]);
     });
 
     // walls
@@ -108,12 +109,12 @@ function tunnel (fc, start) {
             voxels.push([tile[0]-start[0], 0-i, tile[1]-start[1], 20]);
           }
         });
-      })
-    })
-  })
+      });
+    });
+  });
 
-  fc = normalize(fc)
-  fc.features.forEach(function(line){
+  fc = normalize(fc);
+  fc.features.forEach(function(line) {
     var first = turf.point(line.geometry.coordinates[0]);
     cover.tiles(first.geometry, {min_zoom: start[2], max_zoom: start[2]}).forEach(function(tile){
       // poll
@@ -146,7 +147,7 @@ function landuse (fc, start) {
   var voxels = [];
   fc.features.forEach(function(f){
     var tiles = cover.tiles(f.geometry, {min_zoom: start[2], max_zoom: start[2]});
-    tiles.forEach(function(tile){
+    tiles.forEach(function(tile) {
       voxels.push([tile[0]-start[0], 0, tile[1]-start[1], 10]);
     });
 
