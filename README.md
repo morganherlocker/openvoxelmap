@@ -1,7 +1,7 @@
-openvoxelmap
+OpenVoxelMap
 ---
 
-Pull down vectortile data and render it in voxel.js. 
+Render [Mapbox vector tiles](https://www.mapbox.com/developers/vector-tiles/) in a walkable voxel world.
 
 Try it out:
 
