@@ -1,4 +1,4 @@
-voxel-openstreetmap
+openvoxelmap
 ---
 
 Pull down vectortile data and render it in voxel.js. 
